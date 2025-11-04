@@ -4,16 +4,17 @@
 ## zsh
 
 ```
-sudo apt install fzf
+sudo apt install fzf ripgrep
 
-mkdir -p .config/zsh
-git clone https://github.com/Aloxaf/fzf-tab ~/.config/zsh/fzf-tab
-git clone https://github.com/zsh-users/zsh-autosuggestions ~/.config/zsh/zsh-autosuggestions
-git clone https://github.com/zdharma-continuum/fast-syntax-highlighting ~/.config/zsh/fast-syntax-highlighting
+git clone https://github.com/Aloxaf/fzf-tab ~/.zsh/fzf-tab
+git clone https://github.com/zsh-users/zsh-autosuggestions ~/.zsh/zsh-autosuggestions
+git clone https://github.com/zdharma-continuum/fast-syntax-highlighting ~/.zsh/fast-syntax-highlighting
 
+# compile faster colorizing output
 sudo apt install build-essential autoconf libncurses-dev
+cd ~/.zsh/fzf-tab
 build-fzf-tab-module 
 
-sudo apt install ripgrep
+
 ```
 

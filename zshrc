@@ -6,14 +6,6 @@ autoload -U colors && colors
 # No bell: Shut up Zsh
 unsetopt beep
 
-# Set up the prompt
-
-#autoload -Uz promptinit
-#promptinit
-#prompt adam1
-
-#setopt histignorealldups sharehistory
-
 # Use emacs keybindings even if our EDITOR is set to vi
 #bindkey -e
 
@@ -23,26 +15,7 @@ stty stop undef
 # Enable comments when working in an interactive shell.
 setopt interactive_comments
 
-# Prompt. Using single quotes around the PROMPT is very important, otherwise
-# the git branch will always be empty. Using single quotes delays the
-# evaluation of the prompt. Also PROMPT is an alias to PS1.
-git_prompt() {
-  local branch
-  branch="$(git symbolic-ref HEAD 2>/dev/null | cut -d'/' -f3-)"
-  local branch_truncated="${branch:0:30}"
-  if ((${#branch} > ${#branch_truncated})); then
-    branch="${branch_truncated}..."
-  fi
-
-  [ -n "${branch}" ] && echo " (${branch})"
-}
-setopt PROMPT_SUBST
-# shellcheck disable=SC2016
-PROMPT='%B%{$fg[green]%}%n@%{$fg[green]%}%M %{$fg[blue]%}%~%{$fg[yellow]%}$(git_prompt)%{$reset_color%} %(?.$.%{$fg[red]%}$)%b '
-export PROMPT
-
-
-# Keep 1000 lines of history within the shell and save it to ~/.zsh_history:
+# Keep lots of history within the shell and save it to ~/.zsh_history:
 HISTSIZE=10000
 SAVEHIST=10000
 HISTFILE=~/.zsh_history
@@ -57,12 +30,12 @@ _comp_options+=(globdots)
 export ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
 # shellcheck disable=SC1091
-source "$HOME/.config/zsh/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
+source "$HOME/.zsh/fast-syntax-highlighting/fast-syntax-highlighting.plugin.zsh"
 # shellcheck disable=SC1091
-source "$HOME/.config/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
+source "$HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh"
 
 # https://github.com/Aloxaf/fzf-tab
-source ~/.config/zsh/fzf-tab/fzf-tab.plugin.zsh
+source ~/.zsh/fzf-tab/fzf-tab.plugin.zsh
 
 # disable sort when completing `git checkout`
 zstyle ':completion:*:git-checkout:*' sort false
@@ -98,7 +71,7 @@ export FZF_DEFAULT_COMMAND="rg --files --follow --hidden --glob '!.git'"
 export FZF_DEFAULT_OPTS="--info=inline-right --ansi --layout=reverse --border=none"
 export FZF_CTRL_T_OPTS="--preview='less {}' --height=100% --bind shift-up:preview-page-up,shift-down:preview-page-down"
 # shellcheck disable=SC1091
-. ~/.config/themes/tokyonight-moon/fzf.sh
+. ~/.dotfiles/themes/tokyonight-moon/fzf.sh
 
 
 zstyle ':completion:*' auto-description 'specify: %d'
@@ -121,3 +94,71 @@ zstyle ':completion:*:kill:*' command 'ps -u $USER -o pid,%cpu,tty,cputime,cmd'
 # Load aliases if they exist.
 # shellcheck disable=SC1091
 [ -f "$HOME/.config/zsh/.aliases" ] && . "$HOME/.config/zsh/.aliases"
+
+
+# ==================== #
+#        Prompt        #
+# ==================== #
+
+# RPROMPT - execution time of the last command shown to the right on the prompt
+
+# Function to format seconds into HHhMMmSSs (or just MmSs, etc.)
+function format_seconds() {
+    local T=$1
+    local D=$((T/60/60/24))
+    local H=$((T/60/60%24))
+    local M=$((T/60%60))
+    local S=$((T%60))
+
+    if [[ $D -gt 0 ]]; then
+        printf "%d d %02dh%02dm%02ds" $D $H $M $S
+    elif [[ $H -gt 0 ]]; then
+        printf "%02dh%02dm%02ds" $H $M $S
+    elif [[ $M -gt 0 ]]; then
+        printf "%02dm%02ds" $M $S
+    elif [[ $S -gt 0 ]]; then
+        printf "%ds" $S
+    fi
+}
+
+# This function is executed just before a command is run. It records the current value of the SECONDS 
+# shell variable (which counts seconds since the shell started) into a custom timer variable.
+function preexec() {
+    # $SECONDS: Zsh has a built-in SECONDS variable that provides the number of seconds since the shell was started.
+    timer=${timer:-$SECONDS}
+}
+
+# This function is executed just before the prompt is displayed, after a command has finished.
+function precmd() {
+    if [ $timer ]; then
+        local cmd_end="$SECONDS"
+        local elapsed=$((cmd_end - timer))
+
+        # Format the time using the function and export to RPROMPT
+        local formatted_time=$(format_seconds $elapsed)
+        export RPROMPT="%F{cyan}${formatted_time}%{$reset_color%}"
+
+        unset timer
+    fi
+}
+
+# Left prompt setup
+# Using single quotes around the PROMPT is very important, otherwise
+# the git branch will always be empty. Using single quotes delays the
+# evaluation of the prompt. Also PROMPT is an alias to PS1.# shellcheck disable=SC2016
+#PROMPT='%B%{$fg[green]%}%n@%{$fg[green]%}%M %{$fg[blue]%}%~%{$fg[yellow]%}$(git_prompt)%{$reset_color%} %(?.$.%{$fg[red]%}$)%b '
+#PROMPT='%B%{$fg[green]%}%n %{$fg[blue]%}%~%{$fg[yellow]%}$(git_prompt)%{$reset_color%} %(?.$.%{$fg[red]%}$)%b '
+#export PROMPT
+
+# Enable prompt substitution
+# This is necessary to allow variable expansion and command substitution within the prompt strings ($PROMPT and $RPROMPT).
+setopt prompt_subst
+
+source ~/.dotfiles/git-info.zsh
+
+PROMPT='%B' # Start bold text
+# PROMPT+='%F{yellow}%n@%m ' # Display the username followed by @ and hostname in yellow
+PROMPT+='%F{blue}%~' # Display the current working directory in blue
+PROMPT+='%F{yellow}$(__git_info)%f ' # Display the vcs info in yellow
+PROMPT+='%(?.%F{green}%# .%F{red} %# )' # Display a green prompt if the last command succeeded, or red if it failed
+PROMPT+='%b%f' # Turn off bold text and reset the text color
