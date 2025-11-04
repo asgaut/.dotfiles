@@ -16,5 +16,7 @@ cd ~/.zsh/fzf-tab
 build-fzf-tab-module 
 
 
-```
+# For prompt customization
+curl -sS https://starship.rs/install.sh | sh
 
+```
